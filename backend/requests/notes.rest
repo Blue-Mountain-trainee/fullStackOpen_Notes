@@ -1,0 +1,34 @@
+// REST Clientの記法
+
+// ← これはコメント
+
+// ### ← これは複数のHTTPリクエストを区切るための印
+
+// "### 説明" のように，コメントを後ろに書ける
+
+// POSTでは，ヘッダーとリクエストボディの間に空行を入れる
+
+// HTTPリクエストの行とヘッダーの行の間に空行を入れてしまうと，ヘッダーが空とみなされてしまうのに注意
+
+### 全件取得
+GET http://localhost:3001/api/notes
+
+
+### 削除
+DELETE http://localhost:3001/api/notes/2
+
+
+### 正常なPOST
+POST http://localhost:3001/api/notes/
+Content-Type: application/json
+
+{
+    "content": "test note",
+    "important": true
+}
+
+### 不正なPOST
+POST http://localhost:3001/api/notes/
+Content-Type: application/json
+
+{}
