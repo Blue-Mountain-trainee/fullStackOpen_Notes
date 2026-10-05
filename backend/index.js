@@ -26,6 +26,17 @@ const noteSchema = new mongoose.Schema({
   content: String,
   important: Boolean,
 })
+noteSchema.set("toJSON", {
+    transform: (doc, ret) => {
+        console.log("--transform called--")
+        console.log("original document:", doc)
+        console.log("returned object:", ret)
+        ret.id = ret._id.toString()
+        delete ret._id
+        delete ret.__v
+    }
+})
+
 const Note = mongoose.model('Note', noteSchema)
 
 let notes = [
@@ -51,7 +62,9 @@ app.get("/", (req, res) => {
 })
 
 app.get("/api/notes", (req, res) => {
+    console.log("--route handler called--")
     Note.find({}).then(notes => {
+        console.log("got notes from database: ", notes)
         res.json(notes)
     })
     // console.log("request headers:\n", req.headers)
