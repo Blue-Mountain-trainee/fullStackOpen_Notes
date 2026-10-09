@@ -13,8 +13,10 @@
 ### 全件取得
 GET http://localhost:3001/api/notes
 
+### 個別取得
+GET http://localhost:3001/api/notes/6ac0b9ea8a43380efcc843e9
 
-### 削除
+### 削除  !!mongoose未対応
 DELETE http://localhost:3001/api/notes/2
 
 
@@ -27,7 +29,7 @@ Content-Type: application/json
     "important": true
 }
 
-### 不正なPOST
+### 不正なPOST 1
 POST http://localhost:3001/api/notes/
 Content-Type: application/json
 

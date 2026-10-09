@@ -1,61 +1,11 @@
-// commonJSモジュールによるimport
+require("dotenv").config()  // .envの環境変数がグローバルに利用可能になる
 const express = require("express")
+const Note = require('./models/note')
+
 const app = express()
 
 app.use(express.static("dist"))
 app.use(express.json())
-
-const mongoose = require('mongoose')
-
-// ネットワーク問題のローカルな回避策．いずれ削除予定
-const dns = require('node:dns')
-dns.setServers(['1.1.1.1'])
-
-if (process.argv.length < 3) {
-  console.log('give password as argument')
-  process.exit(1)
-}
-
-const password = process.argv[2]
-const url = `mongodb+srv://8126502_db_user:${password}@cluster0.rhy7fxe.mongodb.net/noteApp?retryWrites=true&w=majority&appName=Cluster0`
-
-mongoose.set('strictQuery',false)
-mongoose.connect(url, { family: 4 })
-
-const noteSchema = new mongoose.Schema({
-  content: String,
-  important: Boolean,
-})
-noteSchema.set("toJSON", {
-    transform: (doc, ret) => {
-        console.log("--transform called--")
-        console.log("original document:", doc)
-        console.log("returned object:", ret)
-        ret.id = ret._id.toString()
-        delete ret._id
-        delete ret.__v
-    }
-})
-
-const Note = mongoose.model('Note', noteSchema)
-
-let notes = [
-  {
-    id: "1",
-    content: "HTML is easy",
-    important: true
-  },
-  {
-    id: "2",
-    content: "Browser can execute only JavaScript",
-    important: false
-  },
-  {
-    id: "3",
-    content: "GET and POST are the most important methods of HTTP protocol",
-    important: true
-  }
-]
 
 app.get("/", (req, res) => {
     res.send("<h1>Hello world!</h1>")
@@ -70,22 +20,28 @@ app.get("/api/notes", (req, res) => {
     // console.log("request headers:\n", req.headers)
 })
 
-app.get("/api/notes/:id", (req, res) => {
+app.get("/api/notes/:id", (req, res, next) => {
     const id = req.params.id
-    const note = notes.find(note => note.id === id)
-
-    if (note) {     // オブジェクトは真値，undefは偽値
-        res.json(note)
-    } else {
-        res.status(404).end()
-    }
+    Note.findById(id)
+        .then(note => {
+            if (!note) {
+                return res.status(404).end()
+            }
+            console.log("note found:\n", note)
+            res.json(note)
+        })
+        .catch(e => {
+            next(e)
+        })
 })
 
-app.delete("/api/notes/:id", (req, res) => {
+app.delete("/api/notes/:id", (req, res, next) => {
     const id = req.params.id
-    notes = notes.filter(note => note.id !== id)
-
-    res.status(204).end()
+    Note.findByIdAndDelete(id)
+        .then(result => {
+            res.status(204).end()
+        })
+        .catch(e => next(e))
 })
 
 app.post("/api/notes", (req, res) => {
@@ -98,25 +54,57 @@ app.post("/api/notes", (req, res) => {
         return
     }
 
-    const note = {
-        id: generateId(),
+    const note = new Note({
         content: body.content,
         important: body.important || false
-    }
-    notes.push(note)
-    res.json(note)
-    console.log(notes)
-    // console.log("request headers:\n", req.headers)
+    })
+    
+    note.save().then(savedNote => {
+        console.log("note was saved in DB:\n", savedNote)
+        res.json(savedNote)
+    })
 })
 
-const generateId = () => {
-    const maxId = notes.length > 0
-        ? Math.max(...notes.map(n => Number(n.id)))
-        : 0
-    return String(maxId + 1)
+app.put('/api/notes/:id', (request, response, next) => {
+  const { content, important } = request.body
+
+  Note.findById(request.params.id)
+    .then(note => {
+      if (!note) {
+        return response.status(404).end()
+      }
+
+      note.content = content
+      note.important = important
+
+      return note.save().then((updatedNote) => {
+        response.json(updatedNote)
+      })
+    })
+    .catch(error => next(error))
+})
+
+// 404 handler
+const unknownEndpoint = (req, res) => {
+    res.status(404).send({ error: 'unknown endpoint' })
 }
 
-const PORT = process.env.PORT || 3001
+app.use(unknownEndpoint)
+
+// error handler
+const errorHandler = (error, req, res, next) => {
+    console.error(error.message)
+
+    if (error.name === "CastError") {
+        return res.status(400).send({ error: "malformatted id" })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
+
+const PORT = process.env.PORT
 app.listen(PORT, () => {
     console.log(`Server runnning on port ${PORT}`)
 })
