@@ -20,7 +20,8 @@ GET http://localhost:3001/api/notes/6ac0b9ea8a43380efcc843e9
 DELETE http://localhost:3001/api/notes/2
 
 
-### 正常なPOST
+### 新規作成
+###### 正常送信
 POST http://localhost:3001/api/notes/
 Content-Type: application/json
 
@@ -29,8 +30,16 @@ Content-Type: application/json
     "important": true
 }
 
-### 不正なPOST 1
+###### 不正送信1 validation error: required violation
 POST http://localhost:3001/api/notes/
 Content-Type: application/json
 
 {}
+
+###### 不正送信2 validation error: minLength violation
+POST http://localhost:3001/api/notes/
+Content-Type: application/json
+
+{
+    "content": "wao"
+}

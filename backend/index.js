@@ -44,25 +44,20 @@ app.delete("/api/notes/:id", (req, res, next) => {
         .catch(e => next(e))
 })
 
-app.post("/api/notes", (req, res) => {
+app.post("/api/notes", (req, res, next) => {
     const body = req.body
-
-    if (!body.content) {
-        res.status(400).json({
-            error: "content missing"
-        })
-        return
-    }
 
     const note = new Note({
         content: body.content,
         important: body.important || false
     })
     
-    note.save().then(savedNote => {
-        console.log("note was saved in DB:\n", savedNote)
-        res.json(savedNote)
-    })
+    note.save()
+        .then(savedNote => {
+            console.log("note was saved in DB:\n", savedNote)
+            res.json(savedNote)
+        })
+        .catch(e => next(e))
 })
 
 app.put('/api/notes/:id', (request, response, next) => {
@@ -96,7 +91,11 @@ const errorHandler = (error, req, res, next) => {
     console.error(error.message)
 
     if (error.name === "CastError") {
-        return res.status(400).send({ error: "malformatted id" })
+        return res.status(400).json({ error: "malformatted id" })
+    }
+
+    if (error.name === "ValidationError") {
+        return res.status(400).json({ error: error.message })
     }
 
     next(error)
@@ -106,5 +105,5 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
-    console.log(`Server runnning on port ${PORT}`)
+    console.log(`Server runnning on port ${PORT}...`)
 })
